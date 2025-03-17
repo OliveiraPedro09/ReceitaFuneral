@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "betabank",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -36,6 +37,16 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "966bbb92-0cb9-408f-8b13-72e8be4940ee"
+      }
+    },
+    "owner": "oliver2002",
+    "entryPoint": "./src/LoginScreen.tsx"
   }
 }
