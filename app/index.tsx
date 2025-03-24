@@ -1,15 +1,18 @@
 import React from "react";
-import { createStackNavigator } from "@react-navigation/stack";
-import LoginScreen from "./LoginScreen";
-import HomeScreen from "./HomeScreen";
+import { AuthProvider, useAuth } from "./context/UserAuth";
+import UnauthenticatedStack from "./navigation/NonAuthNav";
+import AuthenticatedStack from "./navigation/AuthNav";
 
-const Stack = createStackNavigator();
+const RootNavigator = () => {
+  const { isAuthenticated } = useAuth();
 
-export default function Index() {
-    return (
-        <Stack.Navigator initialRouteName="Login">
-            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Bem-vindo" }}/>
-        </Stack.Navigator>
-        );
-    }
+  return isAuthenticated ? <AuthenticatedStack /> : <UnauthenticatedStack />;
+};
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
+  );
+}
