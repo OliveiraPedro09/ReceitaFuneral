@@ -11,28 +11,34 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     const { name, email, password, cpf, budget, goal } = req.body;
 
     if (!name || !email || !password || !cpf) {
-        res.status(400).json({ error: "All the fields must be filled in" });
+        res.status(400).json({ error: "Todos os campos são obrigatórios." });
         return;
     }
 
     const checkStmt = db.prepare("SELECT * FROM users WHERE email = ? OR cpf = ?");
-    const user = checkStmt.get(email, cpf)
+    const user = checkStmt.get(email, cpf);
 
-    if(user){
-        res.status(400).json({ error: "User already exists" });
+    if (user) {
+        res.status(400).json({ error: "Usuário já existe." });
         return;
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const stmt = db.prepare(
+    const insertUserStmt = db.prepare(
         "INSERT INTO users (name, email, password, cpf, budget, goal) VALUES (?, ?, ?, ?, ?, ?)"
     );
 
     try {
-        stmt.run(name, email, hashedPassword, cpf, budget ?? 0, goal ?? 0);
-        res.status(201).json({ message: "User registered successfully" });
+        const result = insertUserStmt.run(name, email, hashedPassword, cpf, budget ?? 0, goal ?? 0);
+        const userId = result.lastInsertRowid as number;
+
+        const insertBalanceStmt = db.prepare("INSERT INTO balance (user_id, value) VALUES (?, ?)");
+        insertBalanceStmt.run(userId, 0);
+
+        res.status(201).json({ message: "Usuário registrado com sucesso." });
     } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
+        console.error("Erro ao registrar usuário:", error);
+        res.status(500).json({ error: "Erro interno no servidor." });
     }
 };
 
@@ -41,24 +47,27 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     const { email, password } = req.body;
     
     if (!email || !password) {
-        res.status(400).json({ error: "E-mail e senha are required" });
+        res.status(400).json({ error: "E-mail e senha são obrigatórios." });
         return;
     }
 
     const stmt = db.prepare("SELECT * FROM users WHERE email = ?");
     const user = stmt.get(email) as User | undefined;
     if (!user) {
-        res.status(404).json({ error: "User not found" });
+        res.status(404).json({ error: "Usuário não encontrado." });
         return;
     }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-        res.status(401).json({ error: "Incorrect password" });
+        res.status(401).json({ error: "Senha incorreta." });
         return;
     }
+
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: "1h" });
 
-    res.json({ message: "Logged in successfully", token });
+    // Inclua o userId na resposta
+    res.json({ message: "Login realizado com sucesso.", token, userId: user.id });
 };
 
 // editar

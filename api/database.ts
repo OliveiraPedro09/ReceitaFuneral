@@ -18,7 +18,7 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS balance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        value FLOAT NOT NULL,
+        value FLOAT,
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
 `);

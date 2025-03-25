@@ -8,10 +8,10 @@ router.post("/register", createUser);
 
 router.post("/login", loginUser);
 
-router.put("/profile/:id", updateUser);
+router.put("/profile/:id", updateUser, authenticateToken);
 
-router.delete("/profile/:id", deleteUser);
+router.delete("/profile/:id", deleteUser, authenticateToken);
 
-router.get("/profile/:id", getUserById);
+router.get("/profile/:id", getUserById, authenticateToken);
 
 export default router;

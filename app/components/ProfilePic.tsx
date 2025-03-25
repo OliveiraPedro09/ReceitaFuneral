@@ -7,8 +7,8 @@ const ProfilePic = () => {
     return (
       <Card>
         <Card.Title
-        title="Card Title"
-        subtitle="Card Subtitle"
+        title="Bem-Vindo"
+        subtitle="Ronaldo Fenômeno"
         left={(props) => <Avatar.Image {...props} source={require('assets/images/ronaldo.jpg')} />}
         right={(props) => <IconButton {...props} icon="dots-vertical" onPress={() => {}} />}
       />
