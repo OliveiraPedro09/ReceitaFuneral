@@ -3,48 +3,54 @@ import db from "../database";
 
 // Registrar receita
 export const createRevenue = (req: Request, res: Response): void => {
-    const { user_id, value, tag, transaction_date } = req.body;
+    const { user_id, value, tag_id, transaction_date } = req.body;
 
-    if (!user_id || !value || !tag || !transaction_date) {
-        res.status(400).json({ error: "Todos os campos são obrigatórios." });
+    if (!user_id || !value || !tag_id || !transaction_date) {
+        res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
         return;
     }
 
-    const userId = Math.floor(Number(user_id));
-    if (isNaN(userId)) {
-        res.status(400).json({ error: "O campo user_id deve ser um número válido." });
+    const formattedValue = parseFloat(value);
+    if (isNaN(formattedValue)) {
+        res.status(400).json({ error: "O campo value deve ser um número válido." });
         return;
     }
 
     const balanceStmt = db.prepare("SELECT id, value FROM balance WHERE user_id = ? ORDER BY id DESC LIMIT 1");
-    const lastBalanceRecord = balanceStmt.get(userId) as { id: number; value: number } | undefined;
+    const lastBalanceRecord = balanceStmt.get(user_id) as { id: number; value: number } | undefined;
 
-    let balanceId: number;
     let lastBalance: number;
 
     if (!lastBalanceRecord) {
         const initialBalanceStmt = db.prepare("INSERT INTO balance (user_id, value) VALUES (?, ?)");
-        const result = initialBalanceStmt.run(userId, 0);
-        balanceId = result.lastInsertRowid as number;
+        initialBalanceStmt.run(user_id, 0);
         lastBalance = 0;
     } else {
-        balanceId = lastBalanceRecord.id;
         lastBalance = lastBalanceRecord.value;
     }
 
-    const newBalance = lastBalance + value;
+    const newBalance = lastBalance + formattedValue;
 
-    const revenueStmt = db.prepare(
-        "INSERT INTO revenue (balance_id, value, tag, transaction_date) VALUES (?, ?, ?, ?)"
-    );
-    const balanceUpdateStmt = db.prepare(
-        "INSERT INTO balance (user_id, value) VALUES (?, ?)"
-    );
+    const revenueStmt = db.prepare(`
+        INSERT INTO revenue (user_id, value, tag_id, transaction_date)
+        VALUES (?, ?, ?, ?)
+    `);
+
+    const transactionStmt = db.prepare(`
+        INSERT INTO transactions (user_id, value, tag_id, transaction_date, type)
+        VALUES (?, ?, ?, ?, 'revenue')
+    `);
+
+    const balanceUpdateStmt = db.prepare(`
+        INSERT INTO balance (user_id, value) VALUES (?, ?)
+    `);
 
     try {
-        revenueStmt.run(balanceId, value, tag, transaction_date);
+        revenueStmt.run(user_id, formattedValue, tag_id, transaction_date);
 
-        balanceUpdateStmt.run(userId, newBalance);
+        transactionStmt.run(user_id, formattedValue, tag_id, transaction_date);
+
+        balanceUpdateStmt.run(user_id, newBalance);
 
         res.status(201).json({ message: "Receita registrada com sucesso.", newBalance });
     } catch (error) {

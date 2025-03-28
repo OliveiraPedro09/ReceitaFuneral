@@ -3,54 +3,72 @@ import db from "../database";
 
 // Registrar despesa
 export const createExpense = (req: Request, res: Response): void => {
-    let { user_id, value, tag, transaction_date, billing_date, due_date } = req.body;
+    const { user_id, value, tag_id, transaction_date, due_date } = req.body;
 
-    if (!user_id || !value || !tag || !transaction_date || !billing_date || !due_date) {
-        res.status(400).json({ error: "Todos os campos são obrigatórios." });
+    // Validação dos campos obrigatórios
+    if (!user_id || !value || !tag_id || !transaction_date || !due_date) {
+        res.status(400).json({ error: "Todos os campos obrigatórios devem ser preenchidos." });
         return;
     }
 
-    user_id = Math.floor(Number(user_id));
-    if (isNaN(user_id)) {
+    const formattedValue = parseFloat(value);
+    if (isNaN(formattedValue)) {
+        res.status(400).json({ error: "O campo value deve ser um número válido." });
+        return;
+    }
+
+    // Preparar as queries para inserir na tabela `expense` e `transactions`
+    const expenseStmt = db.prepare(`
+        INSERT INTO expense (user_id, value, tag_id, transaction_date, billing_date, due_date, is_paid)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const transactionStmt = db.prepare(`
+        INSERT INTO transactions (user_id, value, tag_id, transaction_date, type)
+        VALUES (?, ?, ?, ?, 'expense')
+    `);
+
+    try {
+        // Inserir na tabela `expense`
+        expenseStmt.run(user_id, formattedValue, tag_id, transaction_date, null, due_date, 0);
+
+        // Inserir na tabela `transactions`
+        transactionStmt.run(user_id, formattedValue, tag_id, transaction_date);
+
+        res.status(201).json({ message: "Despesa registrada com sucesso." });
+    } catch (error) {
+        console.error("Erro ao registrar despesa:", error);
+        res.status(500).json({ error: "Erro ao registrar despesa." });
+    }
+};
+
+export const getExpensesByUser = (req: Request, res: Response): void => {
+    const { user_id } = req.params;
+    console.log("User ID recebido:", req.params.user_id);
+    
+    if (!user_id) {
+        res.status(400).json({ error: "O campo user_id é obrigatório." });
+        return;
+    }
+
+    const userId = Math.floor(Number(user_id));
+    if (isNaN(userId)) {
         res.status(400).json({ error: "O campo user_id deve ser um número válido." });
         return;
     }
 
-    const balanceStmt = db.prepare("SELECT id, value FROM balance WHERE user_id = ? ORDER BY id DESC LIMIT 1");
-    const lastBalanceRecord = balanceStmt.get(user_id) as { id: number; value: number } | undefined;
-
-    let balanceId: number;
-    let lastBalance: number;
-
-    if (!lastBalanceRecord) {
-        const initialBalanceStmt = db.prepare("INSERT INTO balance (user_id, value) VALUES (?, ?)");
-        const result = initialBalanceStmt.run(user_id, 0); // Saldo inicial como 0
-        balanceId = result.lastInsertRowid as number;
-        lastBalance = 0;
-    } else {
-        balanceId = lastBalanceRecord.id;
-        lastBalance = lastBalanceRecord.value;
-    }
-
-    const newBalance = lastBalance - value;
-
-    const expenseStmt = db.prepare(
-        "INSERT INTO expense (balance_id, value, tag, transaction_date, billing_date, due_date) VALUES (?, ?, ?, ?, ?, ?)"
-    );
-    const balanceUpdateStmt = db.prepare(
-        "INSERT INTO balance (user_id, value) VALUES (?, ?)"
-    );
-
     try {
-        // Inserir a despesa
-        expenseStmt.run(balanceId, value, tag, transaction_date, billing_date, due_date);
+        const stmt = db.prepare("SELECT * FROM expense WHERE user_id = ? ORDER BY transaction_date DESC");
+        const expenses = stmt.all(userId);
 
-        // Atualizar o saldo
-        balanceUpdateStmt.run(user_id, newBalance);
+        if (!expenses || expenses.length === 0) {
+            res.status(404).json({ error: "Nenhuma despesa encontrada para o usuário especificado." });
+            return;
+        }
 
-        res.status(201).json({ message: "Despesa registrada com sucesso.", newBalance });
+        res.status(200).json({ expenses });
     } catch (error) {
-        console.error("Erro ao registrar despesa:", error);
-        res.status(500).json({ error: "Erro ao registrar despesa." });
+        console.error("Erro ao buscar despesas:", error);
+        res.status(500).json({ error: "Erro interno no servidor." });
     }
 };

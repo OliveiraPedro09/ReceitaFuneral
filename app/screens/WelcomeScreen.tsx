@@ -9,7 +9,7 @@ const Welcome: React.FC<{ navigation: any }> = ({ navigation }) => {
   const indexRef = useRef(0); 
 
   useEffect(() => {
-    const colors = ['#784A8A']; 
+    const colors = ['#F39237']; 
   
     const animateColor = () => {
       Animated.timing(backgroundColor, {
@@ -47,7 +47,7 @@ const Welcome: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   const interpolatedColor = backgroundColor.interpolate({
     inputRange: [0, 1, 2],
-    outputRange: ['#784A8A', '#784A8A', '#784A8A'],
+    outputRange: ['#F39237', '#F39237', '#F39237'],
   });
 
   return (

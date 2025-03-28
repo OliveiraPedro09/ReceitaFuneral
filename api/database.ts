@@ -26,24 +26,49 @@ db.exec(`
 db.exec(`
     CREATE TABLE IF NOT EXISTS revenue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        balance_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
         value FLOAT NOT NULL,
-        tag TEXT NOT NULL,
+        tag_id INTEGER NOT NULL,
         transaction_date DATE NOT NULL,
-        FOREIGN KEY(balance_id) REFERENCES balance(id)
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(tag_id) REFERENCES tags(id)
     );
 `);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS expense (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        balance_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
         value FLOAT NOT NULL,
-        tag TEXT NOT NULL,
+        tag_id INTEGER NOT NULL,
         transaction_date DATE NOT NULL,
-        billing_date DATE NOT NULL,
+        billing_date DATE,
         due_date DATE NOT NULL,
-        FOREIGN KEY(balance_id) REFERENCES balance(id)
+        is_paid BOOLEAN DEFAULT 0,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(tag_id) REFERENCES tags(id)
+    );
+`);
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        value FLOAT NOT NULL,
+        tag_id INTEGER NOT NULL,
+        transaction_date DATE NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('expense', 'revenue')),
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(tag_id) REFERENCES tags(id)
+    );
+`);
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL UNIQUE,
+        FOREIGN KEY(user_id) REFERENCES users(id)
     );
 `);
 
